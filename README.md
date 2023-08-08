@@ -1,28 +1,16 @@
 # cljblog
 
-FIXME: description
-
-## Installation
-
-Download from http://example.com/FIXME.
+The toy project to write a simple blog, based on the class tought on Udemi
 
 ## Usage
 
-FIXME: explanation
+This is the web app so either running
 
-    $ java -jar cljblog-0.1.0-standalone.jar [args]
+    `lein ring server`
 
-## Options
+or
 
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
+    `java -jar cljblog-0.1.0-standalone.jar`
 
 ### Any Other Sections
 ### That You Think
@@ -30,7 +18,7 @@ FIXME: listing of options this app accepts.
 
 ## License
 
-Copyright © 2023 FIXME
+Copyright © 2023 CLJBlog
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at
