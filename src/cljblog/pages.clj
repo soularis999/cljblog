@@ -1,10 +1,10 @@
 (ns cljblog.pages
-  (:require [hiccup.page :refer [html5 include-css]]
+  (:require [hiccup.page :refer [html5 include-css include-js]]
             [hiccup.form :as form]
             [ring.util.anti-forgery :refer [anti-forgery-field]]
             ))
 
-(defn- template [& body]
+(defn- template [context & body]
   (html5 [:head
          ; Basic Page
          [:meta {:charset "utf-8"}]
@@ -14,82 +14,118 @@
          ; Mobile
          [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
          ; Fonts
-         [:link {:href "//fonts.googleapis.com/css?family=Raleway:400,300,600" :rel "stylesheet" :type "text/css"}]
-         [:link {:href (include-css "/css/normalize.css") :rel "stylesheet"}]
-         [:link {:href (include-css "/css/skeleton.css") :rel "stylesheet"}]
-         [:link {:href (include-css "/css/custom.css") :rel "stylesheet"}]
+         (include-css "http://fonts.googleapis.com/css?family=Raleway:400,300,600")
+         (include-css "/css/normalize.css")
+         (include-css "/css/skeleton.css")
+         (include-css "/css/custom.css")
          ; JS
-         [:script {:src "//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"}]
+         (include-js "http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js")
         ]
          [:body
           [:div.container
            [:nav.navbar
             [:div.container
-              [:ul.navbar-list
-                [:li.navbar-item [:a.navbar-link {:href "/"} "Blog!"]]
-                [:li.navbar-item [:a.navbar-link {:href "/article/new"} "New Article"]]
+             [:ul.navbar-list
+              [:li.navbar-item [:a.navbar-link {:href "/"} "Blog!"]]
+              (if (not (:admin context))
                 [:li.navbar-item [:a.navbar-link {:href "/admin/login"} "LogIn"]]
-                [:li.navbar-item [:a.navbar-link {:href "/admin/logout"} "Logout"]]
+                (list
+                  [:li.navbar-item [:a.navbar-link {:href "/article/new"} "New Article"]]
+                  [:li.navbar-item [:a.navbar-link {:href "/admin/logout"} "Logout"]])
+                )
               ]
              ]
+            ]
            ]
-          ]
           [:div.container
+           [:div.row [:div {:class "twelve columns"} "&nbsp"]]
             body
           ]
         ]
       )
   )
 
+(def preview-len 270)
+
+(defn- cut-body [article]
+  (if (> (.length article) preview-len)
+    (subs article 0 preview-len)
+    article
+    ))
+
 (defn- article_t [article]
-  [:li [:a {:href (str "/article/" (:id article))}
-        (:title article) ] ]
+  [:div [:h5
+         [:a {:href (str "/article/" (:id article))} (:title article) ]]
+  [:p (-> article :body cut-body)]]
   )
 
-(defn- article_detail_t [article]
-  (list
-    [:a {:href (str "/article/" (:id article) "/edit")} "Edit!"]
-    [:hr]
-    [:h2 (:title article)]
-    [:p (:body article)]
+(defn- article_detail_t [context article]
+  (concat
+    (when (:admin context)
+      (list
+        (form/form-to [:delete (str "/article/" (:id article))]
+          [:div {:class "row"}
+            [:div {:class "two columns"}
+             [:a {:href (str "/article/" (:id article) "/edit") :class "button"} "Edit!"]]
+            [:div {:class "ten columns"}
+             (anti-forgery-field)
+             (form/submit-button {:class "button-primary"} "Delete!")]
+          ])
+        )
     )
+    (list
+      [:h2 (:title article)]
+      [:p (:body article)]
+      )
   )
+)
 
 (defn- articles_t [articles]
-  [:ul (map article_t 
+  [:div.row (map article_t
             (sort-by #(:created %) articles))])
 
-(defn index [articles]
- (template (articles_t articles))
+(defn index [context articles]
+ (template context (articles_t articles))
  )
 
-(defn article [article]
-  (template (article_detail_t article))
+(defn article [context article]
+  (template context (article_detail_t context article))
   )
 
-(defn edit-article [article]
+(defn edit-article [context article]
   (template
+    context
     (form/form-to
       [:post (if article 
                (str "/article/" (:id article))
                "/article")]
 
-      (form/label "title" "Title")
-      (form/text-field "title" (:title article))
+      [:div.row
 
-      (form/label "body" "Body")
-      (form/text-area "body" (:body article))
+       [:div.six_columns
+        (form/label "title" "Title")
+        (form/text-field "title" (:title article))
+        ]
 
+       [:div.six_columns
+        (form/label "body" "Body")
+        (form/text-area "body" (:body article))
+        ]
+       ]
       (anti-forgery-field)
 
-      (form/submit-button "Save!")
+      (form/submit-button {:class "button-primary"} "Save!")
       
       )
     )
   )
 
-(defn login-page []
+(defn login-page [context & msg]
   (template
+    context
+    (when msg
+     [:div.alert.alert-denger msg])
+
     (form/form-to
       [:post "/admin/login"]
 

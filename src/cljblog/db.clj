@@ -19,7 +19,7 @@
 
 (defn- update-with-old-article [old-article title body]
   (let [new-article (replace-old-article old-article title body)]
-    (swap! db #(assoc % (:id new-article) new-article)) 
+    (swap! db #(assoc % (:id new-article) new-article))
   )
 )
 
@@ -28,4 +28,5 @@
     (update-with-old-article old title body)) 
 )
 
-
+(defn delete-article [id]
+  (swap! db #(dissoc % id)))

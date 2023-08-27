@@ -1,6 +1,8 @@
 (ns cljblog.core
   (:require [compojure.core :refer :all]
             [compojure.route :as route]
+            [compojure.handler :as ch]
+            [hiccup.middleware :refer [wrap-base-url]]
             [ring.middleware.defaults :refer [wrap-defaults site-defaults]]
             [ring.middleware.resource :refer [wrap-resource]]
             [ring.util.response :as resp]
@@ -11,17 +13,20 @@
             [cljblog.admin :as admin]
             ))
 
+(defn- build-context [session]
+  {:admin (:admin session)}
+  )
 
 (defroutes app-routes
-  (GET "/" [] (p/index (db/list-articles)))
-  (GET "/article/:id" [id] (p/article (db/get-article id)))
+  (GET "/" [:as {session :session}] (p/index (build-context session) (db/list-articles)))
+  (GET "/article/:id" [id :as {session :session}] (p/article (build-context session) (db/get-article id)))
   (route/not-found "Not Found"))
 
 (defroutes admin-login-routes
  (GET "/admin/login" [:as {session :session}]
        (if (:admin session)
          (resp/redirect "/")
-         (p/login-page)
+         (p/login-page (build-context session))
          )
        )
 
@@ -33,20 +38,26 @@
         (if (admin/check-login username password)
          (-> (resp/redirect "/")
              (assoc-in [:session :admin] true))
-         (p/login-page)
+         (p/login-page "Invalid username or password!")
          ))
   )
 
 (defroutes admin-perm-routes
-  (GET "/article/new" [] (p/edit-article nil))
+  (GET "/article/new" [:as {session :session}] (p/edit-article (build-context session) nil))
   (POST "/article" [title body]
         (do (db/create-article title body)
             (resp/redirect "/")))
 
-  (GET "/article/:id/edit" [id] (p/edit-article (db/get-article id)))
+  (GET "/article/:id/edit" [id :as {session :session}] (p/edit-article (build-context session) (db/get-article id)))
   (POST "/article/:id" [id title body]
         (do (db/update-article id title body)
-            (resp/redirect (str "/article/" id )))))
+            (resp/redirect (str "/article/" id ))))
+
+  (DELETE "/article/:id" [id]
+        (do (db/delete-article id)
+            (resp/redirect "/")))
+
+  )
 
 (defn wrap-admin-routes [handler]
   (fn [request]
@@ -58,11 +69,7 @@
     )
   )
 
-(defn- mock [] 
-  (doseq [x (range 1 10)]
-    (db/create-article (str "Article " x) (str "this is a " x " article"))
-  )
-  (-> (routes
+(def app (-> (routes
         admin-login-routes
         (wrap-routes admin-perm-routes wrap-admin-routes)
         app-routes)
@@ -72,8 +79,5 @@
       session/wrap-session
       logger/wrap-with-logger
     )
-)
-
-(def app (mock))
-
+  )
 
