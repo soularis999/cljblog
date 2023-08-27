@@ -7,11 +7,18 @@ The toy project to write a simple blog, based on the class tought on Udemi
 This is the web app so either running
 
     `lein ring server`
-
+or
+    `lein run`
 or
 
     `java -jar cljblog-0.1.0-standalone.jar`
 
+# docker
+This app can also run as part of clojure docker container
+to run the docker container:
+
+    `docker-compose -f docker-compose.yml up --build`
+    
 ### Any Other Sections
 ### That You Think
 ### Might be Useful
